@@ -20,7 +20,6 @@ import random
 from pydantic_ai import Agent, RunContext
 from pydantic import BaseModel
 from typing import Dict, Any, Annotated
-from pydantic_ai.mcp import MCPServerStdio
 from pydantic_ai.models.openai import OpenAIModel, ModelSettings
 from pydantic_ai.providers.openai import OpenAIProvider
 from domino.agents.tracing import add_tracing, search_traces
@@ -98,20 +97,20 @@ def create_agent():
     Factory function to create a fresh agent with a new API key.
     Call this before each chat request since the VLLM_API_KEY expires every 5 minutes.
     """
-    VLLM_API_KEY = requests.get("http://localhost:8899/access-token").text
-    
-    provider = OpenAIProvider(
-        base_url=BASE_URL,
-        api_key=VLLM_API_KEY,
-    )
-    
-    vllm_model = OpenAIModel("", provider=provider)  # have to leave model name blank?
-    
-    m = TestModel(custom_output_text="This is the answer from fake LLM")
-    
+    # Only fetch the vLLM access token / build the vLLM model when it's actually
+    # needed. This used to run unconditionally, which meant any non-vllm
+    # provider (e.g. "openai") still tried to hit the Domino-runtime-only
+    # localhost:8899 token endpoint and failed outside Domino.
     selected_model = oai_model
     if config['model']['provider'] == 'vllm':
-        selected_model = vllm_model
+        VLLM_API_KEY = requests.get("http://localhost:8899/access-token").text
+        provider = OpenAIProvider(
+            base_url=BASE_URL,
+            api_key=VLLM_API_KEY,
+        )
+        selected_model = OpenAIModel("", provider=provider)  # have to leave model name blank?
+
+    m = TestModel(custom_output_text="This is the answer from fake LLM")
 
     the_agent = Agent(
         selected_model,

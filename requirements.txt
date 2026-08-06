@@ -1,7 +1,9 @@
 fastapi
 mlflow
 pydantic
-pydantic-ai
+pydantic-ai==0.4.7
+opentelemetry-api==1.33.1
+opentelemetry-sdk==1.33.1
 PyYAML
 requests
 uvicorn
