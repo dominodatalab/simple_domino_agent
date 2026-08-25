@@ -132,11 +132,9 @@ pip install -r requirements.txt
 
 In a Domino workspace you may need to run this manually. For Apps, Agent Deploys, and Jobs, these may be installed automatically depending on your Domino environment configuration.
 
-**Note:** The `dominodatalab[agents]` package (which provides `domino.agents.tracing`, `domino.agents.logging`, etc.) is pre-installed in Domino compute environments. If running outside Domino for local testing, install it separately:
+**Note:** `requirements.txt` deliberately lists `dominodatalab[agents]>=2.2.0` explicitly, rather than relying on it being pre-installed in the compute environment. Some Domino compute environment images ship an older, pre-2.2.0 version baked in (which has a real `typing-extensions` conflict with modern `openai`/`pydantic`/`pydantic-ai`) — and since Domino automatically runs `pip install -r requirements.txt` at workload startup, that's the only install step guaranteed to happen. If `dominodatalab[agents]` isn't listed in this file, pip has no reason to upgrade the pre-installed version, *and* no reason to cap `mlflow` at the version range `dominodatalab[agents]` itself depends on — so don't remove that line, and don't add an unpinned `mlflow` dependency elsewhere in the file.
 
-```bash
-pip install dominodatalab[agents]
-```
+**Also note:** `mlflow`, `pydantic-ai`, `opentelemetry-api`, and `opentelemetry-sdk` are all deliberately pinned in `requirements.txt`, together. mlflow's `pydantic_ai` autologging integration only reliably captures per-tool-call and per-model-call trace spans against pydantic-ai versions up to `0.4.7`, against the specific `mlflow-skinny` release range `dominodatalab[agents]` depends on (`3.2.0`) — newer pydantic-ai releases rename/remove APIs this integration patches, and traces silently lose granularity (you'll still get a trace, just a much less useful one — 2-3 generic spans instead of a full waterfall). Don't casually bump any of these versions without re-checking the resulting traces.
 
 ### 1. Configure the agent
 
